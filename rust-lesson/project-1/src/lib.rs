@@ -14,7 +14,11 @@ use std::collections::HashMap;
 pub struct KvStore {
     map: HashMap<String, String>,
 }
-
+impl Default for KvStore {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 impl KvStore {
     /// 关联函数,用于创建一个新的KvStore
     ///  ```rust
@@ -42,7 +46,6 @@ impl KvStore {
     /// set 方法,在键值数据库中,设置一个值
     pub fn set(&mut self, key: String, value: String) {
         self.map.insert(key, value);
-        ()
     }
     /// get方法,在键值数据库中,得到一个Option
     pub fn get(&mut self, key: String) -> Option<String> {
@@ -51,6 +54,5 @@ impl KvStore {
     /// remove方法,在键值数据库,删除一个值
     pub fn remove(&mut self, key: String) {
         self.map.remove(&key);
-        ()
     }
 }
