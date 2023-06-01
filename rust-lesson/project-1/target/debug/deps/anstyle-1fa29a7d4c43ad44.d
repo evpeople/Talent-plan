@@ -1,0 +1,12 @@
+/Users/evpeople/code/talent-plan/rust-lesson/project-1/target/debug/deps/anstyle-1fa29a7d4c43ad44.rmeta: /Users/evpeople/.cargo/registry/src/github.com-1ecc6299db9ec823/anstyle-1.0.0/src/lib.rs /Users/evpeople/.cargo/registry/src/github.com-1ecc6299db9ec823/anstyle-1.0.0/src/macros.rs /Users/evpeople/.cargo/registry/src/github.com-1ecc6299db9ec823/anstyle-1.0.0/src/color.rs /Users/evpeople/.cargo/registry/src/github.com-1ecc6299db9ec823/anstyle-1.0.0/src/effect.rs /Users/evpeople/.cargo/registry/src/github.com-1ecc6299db9ec823/anstyle-1.0.0/src/reset.rs /Users/evpeople/.cargo/registry/src/github.com-1ecc6299db9ec823/anstyle-1.0.0/src/style.rs
+
+/Users/evpeople/code/talent-plan/rust-lesson/project-1/target/debug/deps/libanstyle-1fa29a7d4c43ad44.rlib: /Users/evpeople/.cargo/registry/src/github.com-1ecc6299db9ec823/anstyle-1.0.0/src/lib.rs /Users/evpeople/.cargo/registry/src/github.com-1ecc6299db9ec823/anstyle-1.0.0/src/macros.rs /Users/evpeople/.cargo/registry/src/github.com-1ecc6299db9ec823/anstyle-1.0.0/src/color.rs /Users/evpeople/.cargo/registry/src/github.com-1ecc6299db9ec823/anstyle-1.0.0/src/effect.rs /Users/evpeople/.cargo/registry/src/github.com-1ecc6299db9ec823/anstyle-1.0.0/src/reset.rs /Users/evpeople/.cargo/registry/src/github.com-1ecc6299db9ec823/anstyle-1.0.0/src/style.rs
+
+/Users/evpeople/code/talent-plan/rust-lesson/project-1/target/debug/deps/anstyle-1fa29a7d4c43ad44.d: /Users/evpeople/.cargo/registry/src/github.com-1ecc6299db9ec823/anstyle-1.0.0/src/lib.rs /Users/evpeople/.cargo/registry/src/github.com-1ecc6299db9ec823/anstyle-1.0.0/src/macros.rs /Users/evpeople/.cargo/registry/src/github.com-1ecc6299db9ec823/anstyle-1.0.0/src/color.rs /Users/evpeople/.cargo/registry/src/github.com-1ecc6299db9ec823/anstyle-1.0.0/src/effect.rs /Users/evpeople/.cargo/registry/src/github.com-1ecc6299db9ec823/anstyle-1.0.0/src/reset.rs /Users/evpeople/.cargo/registry/src/github.com-1ecc6299db9ec823/anstyle-1.0.0/src/style.rs
+
+/Users/evpeople/.cargo/registry/src/github.com-1ecc6299db9ec823/anstyle-1.0.0/src/lib.rs:
+/Users/evpeople/.cargo/registry/src/github.com-1ecc6299db9ec823/anstyle-1.0.0/src/macros.rs:
+/Users/evpeople/.cargo/registry/src/github.com-1ecc6299db9ec823/anstyle-1.0.0/src/color.rs:
+/Users/evpeople/.cargo/registry/src/github.com-1ecc6299db9ec823/anstyle-1.0.0/src/effect.rs:
+/Users/evpeople/.cargo/registry/src/github.com-1ecc6299db9ec823/anstyle-1.0.0/src/reset.rs:
+/Users/evpeople/.cargo/registry/src/github.com-1ecc6299db9ec823/anstyle-1.0.0/src/style.rs:
