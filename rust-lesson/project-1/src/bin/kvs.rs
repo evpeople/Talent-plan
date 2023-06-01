@@ -38,15 +38,15 @@ fn main() {
     // You can check for the existence of subcommands, and if found use their
     // matches just as you would the top level cmd
     match &cli.command {
-        Some(Commands::Get { key: value }) => {
+        Some(Commands::Get { key: _value }) => {
             eprintln!("unimplemented");
             std::process::exit(2);
         }
-        Some(Commands::Set { key, value }) => {
+        Some(Commands::Set { key: _, value: _ }) => {
             eprintln!("unimplemented");
             std::process::exit(2);
         }
-        Some(Commands::Rm { key }) => {
+        Some(Commands::Rm { key: _ }) => {
             eprintln!("unimplemented");
             std::process::exit(2);
         }
