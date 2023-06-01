@@ -1,1 +1,0 @@
-/Users/evpeople/code/talent-plan/rust-lesson/project-1/target/debug/kvs: /Users/evpeople/code/talent-plan/rust-lesson/project-1/src/bin/kvs.rs /Users/evpeople/code/talent-plan/rust-lesson/project-1/src/lib.rs
