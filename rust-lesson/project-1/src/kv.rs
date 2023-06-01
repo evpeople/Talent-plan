@@ -11,13 +11,9 @@
 use std::collections::HashMap;
 
 /// KvStore , 键值数据库的实际结构体
+#[derive(Default)]
 pub struct KvStore {
     map: HashMap<String, String>,
-}
-impl Default for KvStore {
-    fn default() -> Self {
-        Self::new()
-    }
 }
 impl KvStore {
     /// 关联函数,用于创建一个新的KvStore
