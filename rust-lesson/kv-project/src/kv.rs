@@ -9,6 +9,9 @@
 
 use std::collections::HashMap;
 use std::path::Path;
+use error::Result;
+use crate::error;
+use crate::error::KvsError::MissingAttribute;
 
 /// KvStore , 键值数据库的实际结构体
 #[derive(Default)]
@@ -40,19 +43,22 @@ impl KvStore {
         }
     }
     /// Kvs 在文件路径打开log文件
-    pub fn open(x: &Path){
-        unimplemented!()
+    pub fn open(x: &Path)->Result<KvStore>{
+        return Err(MissingAttribute("ah".to_string()));
+        // unimplemented!()
     }
     /// set 方法,在键值数据库中,设置一个值
-    pub fn set(&mut self, key: String, value: String) {
+    pub fn set(&mut self, key: String, value: String)->Result<()> {
         self.map.insert(key, value);
+        Ok(())
     }
     /// get方法,在键值数据库中,得到一个Option
-    pub fn get(&mut self, key: String) -> Option<String> {
-        self.map.get(&key).cloned()
+    pub fn get(&mut self, key: String) ->Result<Option<String>> {
+       Ok( self.map.get(&key).cloned())
     }
     /// remove方法,在键值数据库,删除一个值
-    pub fn remove(&mut self, key: String) {
+    pub fn remove(&mut self, key: String)->Result<()> {
         self.map.remove(&key);
+        Ok(())
     }
 }
