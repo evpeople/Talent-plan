@@ -7,8 +7,8 @@
 //!
 //! [`有充分的教程`]:https://github.com/pingcap/talent-plan/tree/master/courses/rust
 
-#![deny(missing_docs)]
 use std::collections::HashMap;
+use std::path::Path;
 
 /// KvStore , 键值数据库的实际结构体
 #[derive(Default)]
@@ -38,6 +38,10 @@ impl KvStore {
         KvStore {
             map: HashMap::new(),
         }
+    }
+    /// Kvs 在文件路径打开log文件
+    pub fn open(x: &Path){
+        unimplemented!()
     }
     /// set 方法,在键值数据库中,设置一个值
     pub fn set(&mut self, key: String, value: String) {
