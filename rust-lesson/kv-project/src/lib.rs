@@ -3,5 +3,6 @@
 
 pub use kv::KvStore;
 pub use error::Result;
+pub use error::KvsError;
 mod kv;
 mod error;

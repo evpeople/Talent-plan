@@ -11,7 +11,8 @@ use std::collections::HashMap;
 use std::path::Path;
 use error::Result;
 use crate::error;
-use crate::error::KvsError::MissingAttribute;
+use crate::error::KvsError;
+use crate::KvsError::DefaultError;
 
 /// KvStore , 键值数据库的实际结构体
 #[derive(Default)]
@@ -44,21 +45,22 @@ impl KvStore {
     }
     /// Kvs 在文件路径打开log文件
     pub fn open(x: &Path)->Result<KvStore>{
-        return Err(MissingAttribute("ah".to_string()));
+        return Ok(Default::default());
+        // return Err(DefaultError);
         // unimplemented!()
     }
     /// set 方法,在键值数据库中,设置一个值
-    pub fn set(&mut self, key: String, value: String)->Result<()> {
-        self.map.insert(key, value);
-        Ok(())
+    pub fn set(&mut self, key: String, value: String)->Result<Option<String>> {
+        Ok(Some(self.map.insert(key.clone(),value)).ok_or(KvsError::KeyNotFound(key))?)
     }
     /// get方法,在键值数据库中,得到一个Option
     pub fn get(&mut self, key: String) ->Result<Option<String>> {
-       Ok( self.map.get(&key).cloned())
+        Ok(Some(self.map.get(&key)
+            .cloned()
+            .ok_or(KvsError::KeyNotFound(key))?))
     }
     /// remove方法,在键值数据库,删除一个值
-    pub fn remove(&mut self, key: String)->Result<()> {
-        self.map.remove(&key);
-        Ok(())
+    pub fn remove(&mut self, key: String)->Result<Option<String>> {
+        Ok(Some(self.map.remove(&key).ok_or(KvsError::KeyNotFound(key))?))
     }
 }

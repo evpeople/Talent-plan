@@ -1,4 +1,5 @@
-use clap::{command, Parser, Subcommand};
+use clap::{command, error, Parser, Subcommand};
+use kvs::{KvsError, KvStore};
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -34,26 +35,32 @@ enum Commands {
 
 fn main() {
     let cli = Cli::parse();
-
+    let mut kv =KvStore::new();
     // You can check for the existence of subcommands, and if found use their
     // matches just as you would the top level cmd
     match &cli.command {
         Some(Commands::Get { key: _value }) => {
-            eprintln!("unimplemented");
-            std::process::exit(2);
+            kv.get(_value.to_string()).unwrap_or_else(|error|{
+                println!("Key not found");
+                None
+            });
+            std::process::exit(0);
         }
-        Some(Commands::Set { key: _, value: _ }) => {
-            eprintln!("unimplemented");
-            std::process::exit(2);
+        Some(Commands::Set { key, value }) => {
+            kv.set(key.to_string(),value.to_string()).unwrap_or_else(|error|{
+                std::process::exit(0);
+            })
         }
-        Some(Commands::Rm { key: _ }) => {
-            eprintln!("unimplemented");
-            std::process::exit(2);
+        Some(Commands::Rm { key }) => {
+            kv.remove(key.to_string()).unwrap_or_else(|error|{
+                println!("Key not found");
+                std::process::exit(1);
+            })
         }
         None => {
             std::process::exit(2);
         }
-    }
-
+    };
+    ()
     // Continued program logic goes here...
 }
