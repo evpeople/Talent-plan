@@ -9,10 +9,11 @@
 
 use crate::error;
 use crate::error::KvsError;
-use crate::KvsError::{DefaultError, SetError};
+use crate::KvsError::{DefaultError, KeyNotFound, SetError};
 use error::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::convert::TryInto;
 use std::env::temp_dir;
 use std::fs;
 use std::fs::File;
@@ -24,12 +25,14 @@ use std::path::Path;
 pub struct KvStore {
     old_data_files: Vec<File>,
     active_file: File,
+    active_file_index: usize,
     map: HashMap<String, BitCaskValue>,
 }
 
 impl Default for KvStore {
     fn default() -> Self {
         KvStore {
+            active_file_index: 0,
             old_data_files: vec![],
             active_file: (File::open(temp_dir())).unwrap(),
             map: HashMap::new(),
@@ -43,11 +46,11 @@ enum Commands {
     },
     Set {
         t_stamp: i64,
-        #[serde(skip_deserializing)]
+        // #[serde(skip_deserializing)]
         k_size: usize,
         v_size: usize,
         key: String,
-        #[serde(skip_deserializing)]
+        // #[serde(skip_deserializing)]
         value: String,
     },
     Rm {
@@ -95,7 +98,7 @@ impl KvStore {
     /// Kvs 在文件路径打开log文件
     pub fn open(x: &Path) -> Result<KvStore> {
         let mut map = HashMap::new();
-        let mut read_func = |f: &File, file_id: usize|->Result<Option<String>> {
+        let mut read_func = |f: &File, file_id: usize| -> Result<Option<String>> {
             let reader = BufReader::new(f);
             for (index, line) in reader.lines().enumerate() {
                 let value: Commands = serde_json::from_str(line?.as_str())?;
@@ -107,17 +110,20 @@ impl KvStore {
                     value,
                 } = value
                 {
-                    Some((key,BitCaskValue {
-                        file_id,
-                        v_size,
-                        value_pos: index,
-                        t_stamp,
-                    }))
+                    Some((
+                        key,
+                        BitCaskValue {
+                            file_id,
+                            v_size,
+                            value_pos: index,
+                            t_stamp,
+                        },
+                    ))
                 } else {
                     None
                 };
-                let (key,value)=bit_cask_value.unwrap();
-                map.insert(key,value);
+                let (key, value) = bit_cask_value.unwrap();
+                map.insert(key, value);
             }
             Ok(Some("ok".to_string()))
         };
@@ -129,10 +135,10 @@ impl KvStore {
         };
         read_func(&active_file, 0)?;
 
-        for (index,entry_result) in fs::read_dir(x)?.enumerate() {
+        for (index, entry_result) in fs::read_dir(x)?.enumerate() {
             let entry = entry_result?;
             if let Ok(file) = File::open(entry.path()) {
-                read_func(&file,index)?;
+                read_func(&file, index)?;
                 files.push(file);
             }
         }
@@ -140,35 +146,63 @@ impl KvStore {
             old_data_files: files,
             active_file: active_file,
             map: map,
+            active_file_index: 0,
         })
     }
     /// set 方法,在键值数据库中,设置一个值
     pub fn set(&mut self, key: String, value: String) -> Result<Option<String>> {
-        use chrono::{ Utc};
+        use chrono::Utc;
+        let stamp = Utc::now().timestamp();
         self.active_file.write(
             Commands::Set {
-                t_stamp: Utc::now().timestamp(),
+                t_stamp: stamp,
                 k_size: key.len(),
                 v_size: value.len(),
-                key,
-                value,
+                key: key.clone(),
+                value: value.clone(),
             }
             .to_string()
             .map_err(|_| SetError)?
             .as_bytes(),
         )?;
+        let bcv = BitCaskValue {
+            file_id: 0,
+            v_size: value.len(),
+            value_pos: self.active_file_index,
+            t_stamp: stamp,
+        };
+        self.active_file_index += 1;
+        self.map.insert(key, bcv);
         Ok(None)
     }
     /// get方法,在键值数据库中,得到一个Option
     pub fn get(&mut self, key: String) -> Result<Option<String>> {
-        // Ok(Some(
-        //     self.map
-        //         .get(key.as_str())
-        //         .cloned()
-        //         .ok_or(KvsError::KeyNotFound(key))?,
-        // ))
-        unimplemented!();
-        Err(DefaultError)
+        self.map
+            .get(key.as_str())
+            .ok_or(KeyNotFound(key))
+            .and_then(|bcv| {
+                let mut file;
+                if bcv.file_id == 0 {
+                    file = &self.active_file;
+                } else {
+                    file = &self.old_data_files.get(bcv.file_id).unwrap()
+                }
+                let reader = BufReader::new(file);
+                let kv: Commands =
+                    serde_json::from_str(reader.lines().nth(line_number - 1).unwrap()?.as_str())?;
+                let value = match kv {
+                    Commands::Set {
+                        t_stamp,
+                        k_size,
+                        v_size,
+                        key,
+                        value,
+                    } => value,
+                    _ => "Key not find",
+                };
+
+                Ok(Some(value))
+            })
     }
     /// remove方法,在键值数据库,删除一个值
     pub fn remove(&mut self, key: String) -> Result<Option<String>> {
