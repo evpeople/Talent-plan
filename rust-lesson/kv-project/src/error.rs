@@ -17,6 +17,9 @@ pub enum KvsError {
     /// SetError 在set 过程中出现的Error
     #[error("set error")]
     SetError,
+    /// RmError 在remove 过程中出现的Error
+    #[error("remove error")]
+    RmError,
     /// IoError 为std::io::error From 添加的Error
     #[error("file io error")]
     IoError,

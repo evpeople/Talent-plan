@@ -9,7 +9,7 @@
 
 use crate::error;
 use crate::error::KvsError;
-use crate::KvsError::{DefaultError, KeyNotFound, SetError};
+use crate::KvsError::{DefaultError, KeyNotFound, RmError, SetError};
 use error::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -197,7 +197,11 @@ impl KvStore {
                         v_size,
                         key,
                         value,
-                    } => value,
+                    } => {
+
+                            value
+
+                    }
                     _ => "Key not find",
                 };
 
@@ -205,10 +209,29 @@ impl KvStore {
             })
     }
     /// remove方法,在键值数据库,删除一个值
+    ///
     pub fn remove(&mut self, key: String) -> Result<Option<String>> {
-        unimplemented!();
-        // Ok(Some(
-        //     self.map.remove(&key).ok_or(KvsError::KeyNotFound(key))?,
-        // ))
+        match self.map.get(key.as_str()) {
+            Some(t) => {
+                use chrono::Utc;
+                let stamp = Utc::now().timestamp();
+                self.active_file.write(
+                    Commands::Set {
+                        t_stamp: stamp,
+                        k_size: key.len(),
+                        v_size: 0,
+                        key: key.clone(),
+                        value: "".to_string(),
+                    }
+                    .to_string()
+                    .map_err(|_| RmError)?
+                    .as_bytes(),
+                )?;
+                self.active_file_index += 1;
+                self.map.remove(key.as_str());
+                Ok(None)
+            }
+            None => Ok(None),
+        }
     }
 }
