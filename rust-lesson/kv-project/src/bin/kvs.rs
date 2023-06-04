@@ -1,5 +1,6 @@
+use clap::builder::Str;
 use clap::{command, error, Parser, Subcommand};
-use kvs::{KvsError, KvStore};
+use kvs::{KvStore, KvsError};
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -32,31 +33,28 @@ enum Commands {
         key: String,
     },
 }
-
 fn main() {
     let cli = Cli::parse();
-    let mut kv =KvStore::new();
+    let mut kv = KvStore::new();
     // You can check for the existence of subcommands, and if found use their
     // matches just as you would the top level cmd
     match &cli.command {
-        Some(Commands::Get { key: _value }) => {
-            kv.get(_value.to_string()).unwrap_or_else(|error|{
+        Some(Commands::Get { key }) => {
+            kv.get(key.to_string()).unwrap_or_else(|error| {
                 println!("Key not found");
                 None
             });
             std::process::exit(0);
         }
-        Some(Commands::Set { key, value }) => {
-            kv.set(key.to_string(),value.to_string()).unwrap_or_else(|error|{
+        Some(Commands::Set { key, value }) => kv
+            .set(key.to_string(), value.to_string())
+            .unwrap_or_else(|error| {
                 std::process::exit(0);
-            })
-        }
-        Some(Commands::Rm { key }) => {
-            kv.remove(key.to_string()).unwrap_or_else(|error|{
-                println!("Key not found");
-                std::process::exit(1);
-            })
-        }
+            }),
+        Some(Commands::Rm { key }) => kv.remove(key.to_string()).unwrap_or_else(|error| {
+            println!("Key not found");
+            std::process::exit(1);
+        }),
         None => {
             std::process::exit(2);
         }
