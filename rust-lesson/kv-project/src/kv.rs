@@ -9,7 +9,7 @@
 
 use crate::{error};
 
-use crate::KvsError::{DefaultError, KeyNotFound, RmError, SetError};
+use crate::KvsError::{DefaultError, RmError, SetError};
 use error::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
