@@ -1,6 +1,5 @@
-
 use clap::{command, Parser, Subcommand};
-use kvs::{KvStore};
+use kvs::KvStore;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -59,6 +58,6 @@ fn main() {
             std::process::exit(2);
         }
     };
-    
+
     // Continued program logic goes here...
 }
