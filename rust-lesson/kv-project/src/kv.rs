@@ -8,12 +8,12 @@
 //! [`有充分的教程`]:https://github.com/pingcap/talent-plan/tree/master/courses/rust
 
 use crate::error;
-use crate::error::KvsError;
-use crate::KvsError::{DefaultError, KeyNotFound, RmError, SetError};
+
+use crate::KvsError::{KeyNotFound, RmError, SetError};
 use error::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::convert::TryInto;
+
 use std::env::temp_dir;
 use std::fs;
 use std::fs::File;
@@ -104,10 +104,10 @@ impl KvStore {
                 let value: Commands = serde_json::from_str(line?.as_str())?;
                 let bit_cask_value = if let Commands::Set {
                     t_stamp,
-                    k_size,
+                    k_size: _,
                     v_size,
                     key,
-                    value,
+                    value: _,
                 } = value
                 {
                     Some((
@@ -128,7 +128,7 @@ impl KvStore {
             Ok(Some("ok".to_string()))
         };
         let mut files = vec![];
-        let mut active_file = if let Some(entry) = fs::read_dir(x)?.next() {
+        let active_file = if let Some(entry) = fs::read_dir(x)?.next() {
             File::open(entry?.path())?
         } else {
             unreachable!();
@@ -144,8 +144,8 @@ impl KvStore {
         }
         Ok(KvStore {
             old_data_files: files,
-            active_file: active_file,
-            map: map,
+            active_file,
+            map,
             active_file_index: 0,
         })
     }
@@ -153,7 +153,7 @@ impl KvStore {
     pub fn set(&mut self, key: String, value: String) -> Result<Option<String>> {
         use chrono::Utc;
         let stamp = Utc::now().timestamp();
-        self.active_file.write(
+       let _= self.active_file.write(
             Commands::Set {
                 t_stamp: stamp,
                 k_size: key.len(),
@@ -181,28 +181,27 @@ impl KvStore {
             .get(key.as_str())
             .ok_or(KeyNotFound(key))
             .and_then(|bcv| {
-                let mut file;
-                if bcv.file_id == 0 {
-                    file = &self.active_file;
+                let file =if bcv.file_id == 0 {
+                     &self.active_file
                 } else {
-                    file = &self.old_data_files.get(bcv.file_id).unwrap()
-                }
+                     self.old_data_files.get(bcv.file_id).unwrap()
+                };
                 let reader = BufReader::new(file);
                 let kv: Commands =
-                    serde_json::from_str(reader.lines().nth(line_number - 1).unwrap()?.as_str())?;
+                    serde_json::from_str(reader.lines().nth(bcv.value_pos- 1).unwrap()?.as_str())?;
                 let value = match kv {
                     Commands::Set {
-                        t_stamp,
-                        k_size,
-                        v_size,
-                        key,
+                        t_stamp: _,
+                        k_size: _,
+                        v_size: _,
+                        key: _,
                         value,
                     } => {
 
                             value
 
                     }
-                    _ => "Key not find",
+                    _ => "Key not find".to_string(),
                 };
 
                 Ok(Some(value))
@@ -212,10 +211,10 @@ impl KvStore {
     ///
     pub fn remove(&mut self, key: String) -> Result<Option<String>> {
         match self.map.get(key.as_str()) {
-            Some(t) => {
+            Some(_t) => {
                 use chrono::Utc;
                 let stamp = Utc::now().timestamp();
-                self.active_file.write(
+                let _=self.active_file.write(
                     Commands::Set {
                         t_stamp: stamp,
                         k_size: key.len(),

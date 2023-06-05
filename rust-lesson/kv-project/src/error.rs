@@ -32,13 +32,13 @@ pub enum KvsError {
 }
 
 impl From<std::io::Error> for KvsError {
-    fn from(value: Error) -> Self {
+    fn from(_value: Error) -> Self {
         KvsError::IoError
     }
 }
 
 impl From<serde_json::Error> for KvsError {
-    fn from(value: serde_json::Error) -> Self {
+    fn from(_value: serde_json::Error) -> Self {
         KvsError::SerdeError
     }
 }

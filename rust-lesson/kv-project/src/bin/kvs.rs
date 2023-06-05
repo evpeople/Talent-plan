@@ -1,6 +1,6 @@
-use clap::builder::Str;
-use clap::{command, error, Parser, Subcommand};
-use kvs::{KvStore, KvsError};
+
+use clap::{command, Parser, Subcommand};
+use kvs::{KvStore};
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -40,7 +40,7 @@ fn main() {
     // matches just as you would the top level cmd
     match &cli.command {
         Some(Commands::Get { key }) => {
-            kv.get(key.to_string()).unwrap_or_else(|error| {
+            kv.get(key.to_string()).unwrap_or_else(|_error| {
                 println!("Key not found");
                 None
             });
@@ -48,10 +48,10 @@ fn main() {
         }
         Some(Commands::Set { key, value }) => kv
             .set(key.to_string(), value.to_string())
-            .unwrap_or_else(|error| {
+            .unwrap_or_else(|_error| {
                 std::process::exit(0);
             }),
-        Some(Commands::Rm { key }) => kv.remove(key.to_string()).unwrap_or_else(|error| {
+        Some(Commands::Rm { key }) => kv.remove(key.to_string()).unwrap_or_else(|_error| {
             println!("Key not found");
             std::process::exit(1);
         }),
@@ -59,6 +59,6 @@ fn main() {
             std::process::exit(2);
         }
     };
-    ()
+    
     // Continued program logic goes here...
 }
