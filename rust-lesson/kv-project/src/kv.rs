@@ -9,7 +9,7 @@
 
 use crate::{error};
 
-use crate::KvsError::{KeyNotFound, RmError, SetError};
+use crate::KvsError::{DefaultError, KeyNotFound, RmError, SetError};
 use error::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -98,9 +98,13 @@ impl KvStore {
     /// Kvs 在文件路径打开log文件
     pub fn open(x: &Path) -> Result<KvStore> {
         let mut map = HashMap::new();
+        let mut a_index=0;
         let mut read_func = |f: &File, file_id: usize| -> Result<Option<String>> {
             let reader = BufReader::new(f);
             for (index, line) in reader.lines().enumerate() {
+                if file_id==0 {
+                    a_index+=1;
+                }
                 let line = match line {
                     Ok(line) => line,
                     Err(_) => break,
@@ -139,7 +143,7 @@ impl KvStore {
         let active_file = if let Some(entry) = it.next() {
             file_open_option.open(entry.path())?
         } else {
-            file_open_option.create(true).open(x.join("1"))?
+            file_open_option.create(true).open(x.join("0"))?
         };
         read_func(&active_file, 0)?;
         let mut files = vec![];
@@ -154,7 +158,7 @@ impl KvStore {
             old_data_files: files,
             active_file,
             map,
-            active_file_index: 0,
+            active_file_index:a_index,
         })
     }
     /// set 方法,在键值数据库中,设置一个值
@@ -185,31 +189,43 @@ impl KvStore {
     }
     /// get方法,在键值数据库中,得到一个Option
     pub fn get(&mut self, key: String) -> Result<Option<String>> {
-        self.map
-            .get(key.as_str())
-            .ok_or(KeyNotFound(key))
-            .and_then(|bcv| {
-                let mut file = if bcv.file_id == 0 {
-                    self.active_file.try_clone()?
-                } else {
-                    self.old_data_files.get(bcv.file_id).unwrap().try_clone()?
-                };
-                file.rewind()?;
-                let reader = BufReader::new(file);
-                let kv: Commands =
-                    serde_json::from_str(reader.lines().nth(bcv.value_pos).unwrap()?.as_str())?;
-                let value = match kv {
-                    Commands::Set {
-                        t_stamp: _,
-                        k_size: _,
-                        v_size: _,
-                        key: _,
-                        value,
-                    } => value,
-                    _ => "Key not find".to_string(),
-                };
-                Ok(Some(value))
-            })
+        // let v=self.map.get(key.as_str()).ok_or(KeyNotFound(key));
+        let res=self.map.get(key.as_str()).map(|bcv|{
+            let mut file = if bcv.file_id == 0 {
+                self.active_file.try_clone().ok()?
+            } else {
+                self.old_data_files.get(bcv.file_id).unwrap().try_clone().ok()?
+            };
+            file.rewind().ok()?;
+            let reader = BufReader::new(file);
+            let kv: Commands =
+                serde_json::from_str(reader.lines().nth(bcv.value_pos).unwrap().ok()?.as_str()).ok()?;
+            match kv {
+                Commands::Set {
+                    t_stamp: _,
+                    k_size: _,
+                    v_size: _,
+                    key: _,
+                    value,
+                } => Some(value),
+                _ => None,
+            }
+        });
+        match res {
+            Some(res)=>{
+                Ok(res)
+            },
+            None=>{
+                Ok(None)
+            }
+        }
+        // self.map
+        //     .get(key.as_str())
+        //     .ok_or(KeyNotFound(key))
+        //     .and_then(|bcv| {
+        //
+        //         Ok(value)
+        //     })
     }
     /// remove方法,在键值数据库,删除一个值
     ///
@@ -232,9 +248,9 @@ impl KvStore {
                 )?;
                 self.active_file_index += 1;
                 self.map.remove(key.as_str());
-                Ok(None)
+                Ok(Some(key))
             }
-            None => Ok(None),
+            None => Err(DefaultError),
         }
     }
 }

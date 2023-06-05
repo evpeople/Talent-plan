@@ -34,15 +34,35 @@ enum Commands {
 }
 fn main() {
     let cli = Cli::parse();
-    let mut kv = KvStore::new();
+    let path=if let Ok(path)= std::env::current_dir(){
+        path
+    }else {
+        unreachable!()
+    };
+
+    let mut kv = if let Ok(kv)= KvStore::open(path.as_path()){
+        kv
+    }else { unreachable!() };
+
     // You can check for the existence of subcommands, and if found use their
     // matches just as you would the top level cmd
     match &cli.command {
         Some(Commands::Get { key }) => {
-            kv.get(key.to_string()).unwrap_or_else(|_error| {
-                println!("Key not found");
+            let value= kv.get(key.to_string()).unwrap_or_else(|_error| {
                 None
             });
+            match value {
+                Some(v)=>{
+                    if v.len()==0 {
+                        println!("Key not found");
+                    }else{
+                        println!("{}",v);
+                    }
+                },
+                None=>{
+                    println!("Key not found");
+                }
+            }
             std::process::exit(0);
         }
         Some(Commands::Set { key, value }) => kv
@@ -50,10 +70,21 @@ fn main() {
             .unwrap_or_else(|_error| {
                 std::process::exit(0);
             }),
-        Some(Commands::Rm { key }) => kv.remove(key.to_string()).unwrap_or_else(|_error| {
-            println!("Key not found");
-            std::process::exit(1);
-        }),
+        Some(Commands::Rm { key }) => {
+
+            let value= kv.remove(key.to_string()).unwrap_or_else(|_error| {
+                None
+            });
+            match value {
+                Some(v)=>{
+                    std::process::exit(0);
+                },
+                None=>{
+                    println!("Key not found");
+                    std::process::exit(2);
+                }
+            }
+        },
         None => {
             std::process::exit(2);
         }
