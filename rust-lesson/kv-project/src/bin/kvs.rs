@@ -76,7 +76,7 @@ fn main() {
                 None
             });
             match value {
-                Some(v)=>{
+                Some(_v)=>{
                     std::process::exit(0);
                 },
                 None=>{
