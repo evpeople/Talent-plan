@@ -34,32 +34,32 @@ enum Commands {
 }
 fn main() {
     let cli = Cli::parse();
-    let path=if let Ok(path)= std::env::current_dir(){
+    let path = if let Ok(path) = std::env::current_dir() {
         path
-    }else {
+    } else {
         unreachable!()
     };
 
-    let mut kv = if let Ok(kv)= KvStore::open(path.as_path()){
+    let mut kv = if let Ok(kv) = KvStore::open(path.as_path()) {
         kv
-    }else { unreachable!() };
+    } else {
+        unreachable!()
+    };
 
     // You can check for the existence of subcommands, and if found use their
     // matches just as you would the top level cmd
     match &cli.command {
         Some(Commands::Get { key }) => {
-            let value= kv.get(key.to_string()).unwrap_or_else(|_error| {
-                None
-            });
+            let value = kv.get(key.to_string()).unwrap_or(None);
             match value {
-                Some(v)=>{
-                    if v.len()==0 {
+                Some(v) => {
+                    if v.is_empty() {
                         println!("Key not found");
-                    }else{
-                        println!("{}",v);
+                    } else {
+                        println!("{}", v);
                     }
-                },
-                None=>{
+                }
+                None => {
                     println!("Key not found");
                 }
             }
@@ -71,20 +71,17 @@ fn main() {
                 std::process::exit(0);
             }),
         Some(Commands::Rm { key }) => {
-
-            let value= kv.remove(key.to_string()).unwrap_or_else(|_error| {
-                None
-            });
+            let value = kv.remove(key.to_string()).unwrap_or(None);
             match value {
-                Some(_v)=>{
+                Some(_v) => {
                     std::process::exit(0);
-                },
-                None=>{
+                }
+                None => {
                     println!("Key not found");
                     std::process::exit(2);
                 }
             }
-        },
+        }
         None => {
             std::process::exit(2);
         }

@@ -7,7 +7,7 @@
 //!
 //! [`有充分的教程`]:https://github.com/pingcap/talent-plan/tree/master/courses/rust
 
-use crate::{error};
+use crate::error;
 
 use crate::KvsError::{DefaultError, RmError, SetError};
 use error::Result;
@@ -15,12 +15,12 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use std::env::temp_dir;
+use std::fs;
 use std::fs::File;
-use std::fs::{OpenOptions};
-use std::io::{BufRead, BufReader };
+use std::fs::OpenOptions;
+use std::io::{BufRead, BufReader};
 use std::io::{Seek, Write};
-use std::path::{Path};
-use std::{fs};
+use std::path::Path;
 /// KvStore , 键值数据库的实际结构体
 pub struct KvStore {
     old_data_files: Vec<File>,
@@ -98,12 +98,12 @@ impl KvStore {
     /// Kvs 在文件路径打开log文件
     pub fn open(x: &Path) -> Result<KvStore> {
         let mut map = HashMap::new();
-        let mut a_index=0;
+        let mut a_index = 0;
         let mut read_func = |f: &File, file_id: usize| -> Result<Option<String>> {
             let reader = BufReader::new(f);
             for (index, line) in reader.lines().enumerate() {
-                if file_id==0 {
-                    a_index+=1;
+                if file_id == 0 {
+                    a_index += 1;
                 }
                 let line = match line {
                     Ok(line) => line,
@@ -158,7 +158,7 @@ impl KvStore {
             old_data_files: files,
             active_file,
             map,
-            active_file_index:a_index,
+            active_file_index: a_index,
         })
     }
     /// set 方法,在键值数据库中,设置一个值
@@ -190,16 +190,21 @@ impl KvStore {
     /// get方法,在键值数据库中,得到一个Option
     pub fn get(&mut self, key: String) -> Result<Option<String>> {
         // let v=self.map.get(key.as_str()).ok_or(KeyNotFound(key));
-        let res=self.map.get(key.as_str()).map(|bcv|{
+        let res = self.map.get(key.as_str()).map(|bcv| {
             let mut file = if bcv.file_id == 0 {
                 self.active_file.try_clone().ok()?
             } else {
-                self.old_data_files.get(bcv.file_id).unwrap().try_clone().ok()?
+                self.old_data_files
+                    .get(bcv.file_id)
+                    .unwrap()
+                    .try_clone()
+                    .ok()?
             };
             file.rewind().ok()?;
             let reader = BufReader::new(file);
             let kv: Commands =
-                serde_json::from_str(reader.lines().nth(bcv.value_pos).unwrap().ok()?.as_str()).ok()?;
+                serde_json::from_str(reader.lines().nth(bcv.value_pos).unwrap().ok()?.as_str())
+                    .ok()?;
             match kv {
                 Commands::Set {
                     t_stamp: _,
@@ -212,12 +217,8 @@ impl KvStore {
             }
         });
         match res {
-            Some(res)=>{
-                Ok(res)
-            },
-            None=>{
-                Ok(None)
-            }
+            Some(res) => Ok(res),
+            None => Ok(None),
         }
         // self.map
         //     .get(key.as_str())
