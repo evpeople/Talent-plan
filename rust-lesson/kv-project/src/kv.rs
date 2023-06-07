@@ -7,12 +7,13 @@
 //!
 //! [`有充分的教程`]:https://github.com/pingcap/talent-plan/tree/master/courses/rust
 
+use std::cmp::Ordering;
 use crate::error;
 
 use crate::KvsError::{DefaultError, RmError, SetError};
 use error::Result;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use std::env::temp_dir;
 use std::fs;
@@ -20,12 +21,13 @@ use std::fs::File;
 use std::fs::OpenOptions;
 use std::io::{BufRead, BufReader};
 use std::io::{Seek, Write};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 /// KvStore , 键值数据库的实际结构体
 pub struct KvStore {
     old_data_files: Vec<File>,
     active_file: File,
     active_file_index: usize,
+    file_path: PathBuf,
     map: HashMap<String, BitCaskValue>,
 }
 
@@ -36,6 +38,7 @@ impl Default for KvStore {
             old_data_files: vec![],
             active_file: (File::open(temp_dir())).unwrap(),
             map: HashMap::new(),
+            file_path: PathBuf::default(),
         }
     }
 }
@@ -46,11 +49,9 @@ enum Commands {
     },
     Set {
         t_stamp: i64,
-        // #[serde(skip_deserializing)]
         k_size: usize,
         v_size: usize,
         key: String,
-        // #[serde(skip_deserializing)]
         value: String,
     },
     Rm {
@@ -159,10 +160,103 @@ impl KvStore {
             active_file,
             map,
             active_file_index: a_index,
+            file_path: x.to_path_buf(),
         })
+    }
+    fn check_and_change_active_file(&mut self) {
+        if self.active_file.metadata().unwrap().len() < 1000 {
+            return;
+        }
+        let old_file = self.active_file.try_clone().unwrap();
+        let file_name = (self.old_data_files.len() + 1).to_string();
+        let new_file_path = self.file_path.join(file_name);
+        let new_active_file = OpenOptions::new()
+            .create(true)
+            .write(true)
+            .read(true)
+            .open(new_file_path);
+        self.old_data_files.push(old_file);
+        self.active_file = new_active_file.unwrap();
+        self.active_file_index = 0;
+    }
+    fn write_to_file(&mut self,map:HashMap<String,Commands>){
+        let path=self.file_path.join("new");
+        let mut file =File::create(path).unwrap();
+        let mut entries =vec!();
+        map.iter().for_each(|kv|{
+            entries.push(kv.1)
+        });
+        entries.sort_by(|a,b|{
+            match (a,b) {
+                (Commands::Set {t_stamp:ts1,..},Commands::Set {t_stamp:ts2,..})=>{
+                    ts1.cmp(ts2)
+                },
+                (_,_)=>{
+                    Ordering::Equal
+                }
+            }
+        });
+        entries.iter().for_each(
+            |e|{
+                file.write(e.to_string().unwrap().as_bytes()).unwrap();
+            }
+        )
+
+
+    }
+    fn renew_file(&mut self){
+        let p=self.file_path.clone();
+        for i in 1..self.old_data_files.len() {
+           fs::remove_file(p.join(i.to_string())).unwrap()
+        }
+        fs::rename(p.join("new".to_string()),p.join("1".to_string()));
+    }
+    fn compress(&mut self) -> HashMap<String, Commands> {
+        let mut new_kv = HashMap::new();
+        let _ = self.old_data_files.iter().for_each(|f| {
+            let mut nf = f.try_clone().unwrap();
+            nf.rewind().unwrap();
+            let reader = BufReader::new(nf);
+            reader.lines().for_each(|line| {
+                let nl = line.unwrap();
+                let kv: Commands = serde_json::from_str(nl.as_str()).unwrap();
+                let kv = match kv {
+                    Commands::Set {
+                        t_stamp: ts,
+                        k_size: ks,
+                        v_size: vs,
+                        key ,
+                        value,
+                    } => {
+                        if !value.is_empty() {
+                            Some((key.clone(),Commands::Set {
+                                t_stamp: ts,
+                                k_size: ks,
+                                v_size: vs,
+                                key,
+                                value,
+                            }))
+                        }else {
+                            None
+                        }
+                    }
+                    _ => None,
+                };
+                let (k,v)=kv.unwrap();
+                new_kv.insert(k,v);
+            });
+        });
+        return new_kv
+    }
+    fn total_compress(&mut self){
+        self.check_and_change_active_file();
+      let kv=  self.compress();
+        self.write_to_file(kv);
+        self.renew_file();
     }
     /// set 方法,在键值数据库中,设置一个值
     pub fn set(&mut self, key: String, value: String) -> Result<Option<String>> {
+        self.total_compress();
         use chrono::Utc;
         let stamp = Utc::now().timestamp();
         let _ = self.active_file.write(
@@ -177,8 +271,9 @@ impl KvStore {
             .map_err(|_| SetError)?
             .as_bytes(),
         )?;
+        let file_id = self.old_data_files.len();
         let bcv = BitCaskValue {
-            file_id: 0,
+            file_id,
             v_size: value.len(),
             value_pos: self.active_file_index,
             t_stamp: stamp,
@@ -191,11 +286,11 @@ impl KvStore {
     pub fn get(&mut self, key: String) -> Result<Option<String>> {
         // let v=self.map.get(key.as_str()).ok_or(KeyNotFound(key));
         let res = self.map.get(key.as_str()).map(|bcv| {
-            let mut file = if bcv.file_id == 0 {
+            let mut file = if bcv.file_id == self.old_data_files.len() {
                 self.active_file.try_clone().ok()?
             } else {
                 self.old_data_files
-                    .get(bcv.file_id)
+                    .get(bcv.file_id - 1)
                     .unwrap()
                     .try_clone()
                     .ok()?
