@@ -7,13 +7,13 @@
 //!
 //! [`有充分的教程`]:https://github.com/pingcap/talent-plan/tree/master/courses/rust
 
-use std::cmp::Ordering;
 use crate::error;
+use std::cmp::Ordering;
 
 use crate::KvsError::{DefaultError, RmError, SetError};
 use error::Result;
 use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use std::env::temp_dir;
 use std::fs;
@@ -29,7 +29,7 @@ pub struct KvStore {
     active_file_index: usize,
     file_path: PathBuf,
     map: HashMap<String, BitCaskValue>,
-    file_size:u64,
+    file_size: u64,
 }
 
 impl Default for KvStore {
@@ -40,7 +40,7 @@ impl Default for KvStore {
             active_file: (File::open(temp_dir())).unwrap(),
             map: HashMap::new(),
             file_path: PathBuf::default(),
-            file_size:100,
+            file_size: 100,
         }
     }
 }
@@ -70,7 +70,8 @@ impl Commands {
         Ok(format!("{}\n", serde_json::to_string(self)?))
     }
 }
-#[derive(Debug,Clone)]
+#[derive(Debug, Clone)]
+#[allow(dead_code)]
 struct BitCaskValue {
     file_id: usize,
     v_size: usize,
@@ -105,29 +106,32 @@ impl KvStore {
         let mut a_index = 0;
         let mut unsort_files: Vec<_> = fs::read_dir(x)?.filter_map(|entry| entry.ok()).collect();
         unsort_files.sort_by_key(|path| path.file_name());
-        let mut it = unsort_files.iter();
+        let it = unsort_files.iter();
         let mut binding = OpenOptions::new();
         let file_open_option = binding.read(true).append(true);
-        let mut active_file:File=File::open(x).unwrap();
+        let mut active_file: File = File::open(x).unwrap();
         if unsort_files.is_empty() {
-            active_file=file_open_option.write(true).create(true).open(x.join("0")).unwrap();
+            active_file = file_open_option
+                .write(true)
+                .create(true)
+                .open(x.join("0"))
+                .unwrap();
         }
         let mut files = vec![];
         for (index, entry_result) in it.enumerate() {
             let entry = entry_result;
-            if index==unsort_files.len()-1 {
+            if index == unsort_files.len() - 1 {
                 if let Ok(file) = file_open_option.open(entry.path()) {
-                    let mut map2=HashMap::new();
-                    (map2,a_index)=KvStore::read_func(&file, index);
-                    map.extend(map2.clone());
-                   active_file=file ;
+                     let (some_map, a_index2) = KvStore::read_func(&file, index);
+                        map.extend(some_map);
+                        a_index=a_index2;
+                    active_file = file;
                 }
-                break
+                break;
             }
             if let Ok(file) = file_open_option.open(entry.path()) {
-                let mut map2=HashMap::new();
-                (map2,_)=KvStore::read_func(&file, index);
-                map.extend(map2.clone());
+                let (map2,_)=KvStore::read_func(&file,index);
+                map.extend(map2);
                 files.push(file);
             }
         }
@@ -137,10 +141,10 @@ impl KvStore {
             map,
             active_file_index: a_index,
             file_path: x.to_path_buf(),
-            file_size:100,
+            file_size: 100,
         })
     }
-    fn read_func(f:&File,file_id:usize)->(HashMap<String,BitCaskValue>,usize){
+    fn read_func(f: &File, file_id: usize) -> (HashMap<String, BitCaskValue>, usize) {
         let mut map = HashMap::new();
         let mut a_index = 0;
         let reader = BufReader::new(f);
@@ -176,7 +180,7 @@ impl KvStore {
             let (key, value) = bit_cask_value.unwrap();
             map.insert(key, value);
         }
-        (map,a_index)
+        (map, a_index)
     }
     fn change_active_file(&mut self) {
         let old_file = self.active_file.try_clone().unwrap();
@@ -190,57 +194,51 @@ impl KvStore {
         self.old_data_files.push(old_file);
         self.active_file = new_active_file.unwrap();
         self.active_file_index = 0;
-
     }
-    fn write_to_file(&mut self,map:HashMap<String,Commands>){
-        let path=self.file_path.join("0");
-        let mut file =File::create(path).unwrap();
-        let mut entries =vec!();
-        map.iter().for_each(|kv|{
-            entries.push(kv.1)
-        });
-        entries.sort_by(|a,b|{
-            match (a,b) {
-                (Commands::Set {t_stamp:ts1,..},Commands::Set {t_stamp:ts2,..})=>{
-                    ts1.cmp(ts2)
-                },
-                (_,_)=>{
-                    Ordering::Equal
-                }
+    fn write_to_file(&mut self, map: HashMap<String, Commands>) {
+        let path = self.file_path.join("0");
+        let mut file = File::create(path).unwrap();
+        let mut entries = vec![];
+        map.iter().for_each(|kv| entries.push(kv.1));
+        entries.sort_by(|a, b| match (a, b) {
+            (Commands::Set { t_stamp: ts1, .. }, Commands::Set { t_stamp: ts2, .. }) => {
+                ts1.cmp(ts2)
             }
+            (_, _) => Ordering::Equal,
         });
-        entries.iter().for_each(
-            |e|{
-                file.write(e.to_string().unwrap().as_bytes()).unwrap();
-            }
-        )
+        entries.iter().for_each(|e| {
+            file.write_all(e.to_string().unwrap().as_bytes()).unwrap();
+        })
     }
-    fn remove_file(&mut self){
-        let p=self.file_path.clone();
-        fs::read_dir(&p).unwrap().for_each(|en|{
-            let e=en.unwrap();
-            if e.file_name()!="0" {
-                fs::remove_file(e.path());
+    fn remove_file(&mut self) {
+        let p = self.file_path.clone();
+        fs::read_dir(p).unwrap().for_each(|en| {
+            let e = en.unwrap();
+            if e.file_name() != "0" {
+                let _ = fs::remove_file(e.path());
             }
         });
         self.old_data_files.clear();
     }
-    fn create_key_dir(&mut self){
+    fn create_key_dir(&mut self) {
         self.map.clear();
         // fs::rename(self.file_path.join("0"),self.file_path.join("2"));
-        let f=File::open(self.file_path.join("0")).unwrap();
-        let (mp,_)=KvStore::read_func(&f,0);
-        self.map=mp;
+        let f = File::open(self.file_path.join("0")).unwrap();
+        let (mp, _) = KvStore::read_func(&f, 0);
+        self.map = mp;
         self.old_data_files.push(f);
         let mut binding = OpenOptions::new();
         let file_open_option = binding.read(true).append(true);
-        let f2=file_open_option.create(true).open(self.file_path.join("1")).unwrap();
-        self.active_file=f2;
-        self.active_file_index=0;
+        let f2 = file_open_option
+            .create(true)
+            .open(self.file_path.join("1"))
+            .unwrap();
+        self.active_file = f2;
+        self.active_file_index = 0;
     }
     fn compress(&mut self) -> HashMap<String, Commands> {
         let mut new_kv = HashMap::new();
-        let mut f_read=|f:&File|{
+        let mut f_read = |f: &File| {
             let mut nf = f.try_clone().unwrap();
             nf.rewind().unwrap();
             let reader = BufReader::new(nf);
@@ -256,44 +254,41 @@ impl KvStore {
                         value,
                     } => {
                         if !value.is_empty() {
-                            Some((key.clone(), Commands::Set {
-                                t_stamp: ts,
-                                k_size: ks,
-                                v_size: vs,
-                                key,
-                                value,
-                            }))
+                            Some((
+                                key.clone(),
+                                Commands::Set {
+                                    t_stamp: ts,
+                                    k_size: ks,
+                                    v_size: vs,
+                                    key,
+                                    value,
+                                },
+                            ))
                         } else {
                             None
                         }
                     }
                     _ => None,
                 };
-                if kv.is_some() {
-                    let (k, v) = kv.unwrap();
-                    new_kv.insert(k, v);
+                if let Some(kv)=kv {
+                    new_kv.insert(kv.0,kv.1);
                 }
             })
         };
-        let _ = self.old_data_files.iter().for_each(|f| {
-                f_read(f)
-            });
+        self.old_data_files.iter().for_each(|f| f_read(f));
         f_read(&self.active_file);
-        return new_kv
+        new_kv
     }
-    fn total_compress(&mut self)->bool{
+    fn total_compress(&mut self) {
         if self.active_file.metadata().unwrap().len() > self.file_size {
             self.change_active_file();
-            return false ;
         }
-        if self.old_data_files.len()>5 {
-            let kv=  self.compress();
+        if self.old_data_files.len() > 5 {
+            let kv = self.compress();
             self.write_to_file(kv);
             self.remove_file();
             self.create_key_dir();
-            return false;
         }
-        return true
     }
     /// set 方法,在键值数据库中,设置一个值
     pub fn set(&mut self, key: String, value: String) -> Result<Option<String>> {
@@ -331,7 +326,7 @@ impl KvStore {
                 self.active_file.try_clone().ok()?
             } else {
                 self.old_data_files
-                    .get(bcv.file_id )
+                    .get(bcv.file_id)
                     .unwrap()
                     .try_clone()
                     .ok()?
