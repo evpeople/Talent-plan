@@ -64,7 +64,6 @@ fn cli_set() {
 #[test]
 fn cli_get_stored() -> Result<()> {
     let temp_dir = TempDir::new().expect("unable to create temporary working directory");
-
     let mut store = KvStore::open(temp_dir.path())?;
     store.set("key1".to_owned(), "value1".to_owned())?;
     store.set("key2".to_owned(), "value2".to_owned())?;
@@ -203,7 +202,6 @@ fn get_stored_value() -> Result<()> {
 #[test]
 fn overwrite_value() -> Result<()> {
     let temp_dir = TempDir::new().expect("unable to create temporary working directory");
-    dbg!(temp_dir.path());
     let mut store = KvStore::open(temp_dir.path())?;
 
     store.set("key1".to_owned(), "value1".to_owned())?;
@@ -276,7 +274,7 @@ fn compaction() -> Result<()> {
 
     let mut current_size = dir_size();
     for iter in 0..1000 {
-        for key_id in 0..1000 {
+        for key_id in 0..1000{
             let key = format!("key{}", key_id);
             let value = format!("{}", iter);
             store.set(key, value)?;
